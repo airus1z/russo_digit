@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treino de Digitação Cirílica</title>
+    <style>
+        :root {
+            --bg-color: #1e1e2e;
+            --text-color: #cdd6f4;
+            --primary: #89b4fa;
+            --correct: #a6e3a1;
+            --incorrect: #f38ba8;
+            --surface: #313244;
+            --surface-light: #45475a;
+            --map-bg: #2a2a3e;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            margin: 0;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--surface);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h2 {
+            margin-top: 0;
+            color: var(--primary);
+            text-align: center;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        select, button {
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: 1px solid var(--surface-light);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 15px;
+            cursor: pointer;
+            outline: none;
+            transition: 0.2s;
+            font-weight: 500;
+        }
+        select:focus, button:hover {
+            border-color: var(--primary);
+            background-color: var(--surface-light);
+        }
+        button {
+            background-color: var(--primary);
+            color: var(--bg-color);
+            border: none;
+        }
+        button:hover {
+            background-color: #6a9af5;
+        }
+
+        .mapa-container {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background-color: var(--map-bg);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            border: 2px solid var(--surface-light);
+            display: none;
+        }
+        .mapa-container.active {
+            display: block;
+        }
+        #svgContainer {
+            width: 100%;
+            height: 100%;
+        }
+        .hint-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: #a6adc8;
+            cursor: pointer;
+        }
+        .mapa-container svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .mapa-marker {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background-color: var(--incorrect);
+            border: 3px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 25px rgba(243, 139, 168, 0.7);
+            transition: left 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        top 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        background-color 0.3s, box-shadow 0.3s;
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+        }
+        .mapa-marker.active {
+            display: block;
+        }
+        .mapa-marker.correct {
+            background-color: var(--correct);
+            box-shadow: 0 0 30px rgba(166, 227, 161, 0.8);
+        }
+
+        .text-display {
+            font-size: 24px;
+            margin-bottom: 18px;
+            min-height: 80px;
+            padding: 20px;
+            background: #181825;
+            border-radius: 8px;
+            text-align: center;
+            word-wrap: break-word;
+            transition: color 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .text-display .original-text {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--primary);
+            letter-spacing: 1px;
+        }
+        .char.correct {
+            color: var(--correct);
+        }
+        .char.incorrect {
+            color: var(--incorrect);
+            background: rgba(243, 139, 168, 0.2);
+            border-radius: 3px;
+        }
+
+        .input-area {
+            width: 100%;
+            padding: 14px 18px;
+            font-size: 20px;
+            border-radius: 8px;
+            border: 2px solid var(--surface-light);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            outline: none;
+            box-sizing: border-box;
+            transition: 0.2s;
+            letter-spacing: 0.5px;
+        }
+        .input-area:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(137, 180, 250, 0.15);
+        }
+        .input-area:disabled {
+            opacity: 0.6;
+        }
+        .input-area.correct-input {
+            border-color: var(--correct);
+        }
+        .input-area.incorrect-input {
+            border-color: var(--incorrect);
+        }
+
+        .stats {
+            margin-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #a6adc8;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .counter-badge {
+            background-color: #45475a;
+            padding: 5px 14px;
+            border-radius: 20px;
+            color: #a6e3a1;
+            font-weight: bold;
+            font-size: 15px;
+        }
+        .feedback-text {
+            font-weight: 500;
+            font-size: 15px;
+        }
+        .feedback-text.success {
+            color: var(--correct);
+        }
+        .feedback-text.info {
+            color: var(--primary);
+        }
+
+        @media (max-width: 600px) {
+            .container { padding: 15px; }
+            .text-display { font-size: 18px; padding: 15px; }
+            .input-area { font-size: 16px; }
+            .mapa-container { height: 280px; }
+            .text-display .original-text { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>⌨️ Treino de Digitação Cirílica</h2>
+
+    <div class="controls">
+        <select id="modeSelect">
+            <option value="curto">Cidades Russas + Mapa</option>
+            <option value="longo">Notícias em Russo</option>
+        </select>
+        <select id="packageSelect"></select>
+        <button id="btnSkip">⏭ Pular</button>
+        <label class="hint-label"><input type="checkbox" id="hintToggle"> Mostrar dica em latino</label>
+    </div>
+
+    <!-- Container do Mapa -->
+    <div id="mapContainer" class="mapa-container">
+        <div id="svgContainer"></div>
+        <div id="mapMarker" class="mapa-marker"></div>
+    </div>
+
+    <div id="textDisplay" class="text-display">Carregando...</div>
+
+    <input type="text" id="inputField" class="input-area" 
+           placeholder="Digite aqui..." autocomplete="off" spellcheck="false">
+
+    <div class="stats">
+        <span id="progressoSpan"></span>
+        <span id="feedbackSpan" class="feedback-text"></span>
+    </div>
+</div>
+
+<!-- ====== SCRIPTS ====== -->
+<script src="dados.js"></script>
+<script src="textos_extra.js"></script>
+<script src="mapa_renderer.js"></script>
+
+<script>
+/* ==========================================
+   MOTOR PRINCIPAL - TREINO CIRÍLICO
+   ========================================== */
+
+// Dimensões internas fixas do SVG gerado por MapaRussia.gerarSVG().
+// Precisam bater com o viewBox usado lá dentro para a conversão
+// de coordenadas ficar correta.
+const MAPA_LARGURA = 900;
+const MAPA_ALTURA = 700;
+
+class TypingTutor {
+    constructor() {
+        this.modoAtual = 'curto';
+        this.pacoteAtualKey = 'ru_cidades';
+        this.dadoAtual = null;
+        this.textoOriginal = '';
+        this.textoEsperado = '';
+
+        // Guarda o ponto (lat/lon) atualmente marcado no mapa, para poder
+        // reposicionar o marcador quando a janela é redimensionada.
+        this.pontoMarcadoAtual = null;
+
+        this.ui = {
+            modeSelect: document.getElementById('modeSelect'),
+            packageSelect: document.getElementById('packageSelect'),
+            btnSkip: document.getElementById('btnSkip'),
+            textDisplay: document.getElementById('textDisplay'),
+            inputField: document.getElementById('inputField'),
+            progressoSpan: document.getElementById('progressoSpan'),
+            feedbackSpan: document.getElementById('feedbackSpan'),
+            mapContainer: document.getElementById('mapContainer'),
+            svgContainer: document.getElementById('svgContainer'),
+            marker: document.getElementById('mapMarker'),
+            hintToggle: document.getElementById('hintToggle')
+        };
+        this.timerProximaRodada = null;
+
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        this.ui.modeSelect.addEventListener('change', (e) => {
+            this.modoAtual = e.target.value;
+            this.atualizarListaPacotes();
+            this.iniciarRodada();
+        });
+
+        this.ui.packageSelect.addEventListener('change', (e) => {
+            this.pacoteAtualKey = e.target.value;
+            this.iniciarRodada();
+        });
+
+        this.ui.btnSkip.addEventListener('click', () => this.iniciarRodada(true));
+
+        this.ui.hintToggle.addEventListener('change', () => {
+            const pacote = Pacotes[this.pacoteAtualKey];
+            if (this.modoAtual === 'longo') {
+                this.renderizarTextoNaTela(pacote);
+                this.processarDigitacao();
+            }
+            this.ui.inputField.focus();
+        });
+        
+        this.ui.inputField.addEventListener('input', (e) => this.processarDigitacao(e));
+        
+        this.ui.inputField.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!this.ui.inputField.disabled) this.iniciarRodada(true);
+            }
+        });
+
+        // O SVG usa preserveAspectRatio (letterbox), então a posição em
+        // pixels do marcador muda sempre que o container muda de tamanho.
+        window.addEventListener('resize', () => this.reposicionarMarcador());
+    }
+
+    atualizarListaPacotes() {
+        const select = this.ui.packageSelect;
+        select.innerHTML = '';
+        let primeiro = null;
+
+        for (const [key, pkg] of Object.entries(Pacotes)) {
+            if (pkg.modo === this.modoAtual) {
+                if (!primeiro) primeiro = key;
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = pkg.nome;
+                select.appendChild(opt);
+            }
+        }
+        if (primeiro) this.pacoteAtualKey = primeiro;
+    }
+
+    pegarDadoUnico(pacote) {
+        const naoCompletadas = pacote.dados.filter(d => !pacote.completadas.has(d.nome));
+        if (naoCompletadas.length === 0) {
+            pacote.completadas.clear();
+            return pacote.dados[Math.floor(Math.random() * pacote.dados.length)];
+        }
+        return naoCompletadas[Math.floor(Math.random() * naoCompletadas.length)];
+    }
+
+    // Converte um ponto do sistema de coordenadas do SVG (900x700) para
+    // pixels reais dentro de .mapa-container, respeitando o letterbox
+    // gerado por preserveAspectRatio="xMidYMid meet" (o padrão do SVG).
+    converterParaPixelsDoContainer(pos) {
+        // clientWidth/Height excluem a borda, que é o referencial do
+        // posicionamento absoluto do marcador.
+        const largura = this.ui.mapContainer.clientWidth;
+        const altura = this.ui.mapContainer.clientHeight;
+        const escala = Math.min(largura / MAPA_LARGURA, altura / MAPA_ALTURA);
+        const offsetX = (largura - MAPA_LARGURA * escala) / 2;
+        const offsetY = (altura - MAPA_ALTURA * escala) / 2;
+        return {
+            x: offsetX + pos.x * escala,
+            y: offsetY + pos.y * escala
+        };
+    }
+
+    // Posiciona o marcador em cima da cidade (lat, lon) fornecida.
+    posicionarMarcador(lat, lon) {
+        this.pontoMarcadoAtual = { lat, lon };
+        const posSvg = MapaRussia.localizarNaTela(lat, lon, MAPA_LARGURA, MAPA_ALTURA);
+        const posPixel = this.converterParaPixelsDoContainer(posSvg);
+        this.ui.marker.style.left = posPixel.x + 'px';
+        this.ui.marker.style.top = posPixel.y + 'px';
+    }
+
+    // Reaplica a posição do último ponto marcado (usado no evento de resize).
+    reposicionarMarcador() {
+        if (!this.pontoMarcadoAtual) return;
+        if (!this.ui.marker.classList.contains('active')) return;
+        const posSvg = MapaRussia.localizarNaTela(
+            this.pontoMarcadoAtual.lat, this.pontoMarcadoAtual.lon, MAPA_LARGURA, MAPA_ALTURA
+        );
+        const posPixel = this.converterParaPixelsDoContainer(posSvg);
+        this.ui.marker.style.left = posPixel.x + 'px';
+        this.ui.marker.style.top = posPixel.y + 'px';
+    }
+
+    iniciarRodada(skip = false) {
+        clearTimeout(this.timerProximaRodada);
+        this.ui.inputField.value = '';
+        this.ui.inputField.disabled = false;
+        this.ui.inputField.className = 'input-area';
+        this.ui.textDisplay.style.color = 'var(--text-color)';
+        this.ui.feedbackSpan.textContent = '';
+        this.ui.feedbackSpan.className = 'feedback-text';
+
+        const pacote = Pacotes[this.pacoteAtualKey];
+
+        if (this.modoAtual === 'curto' && pacote.tipo === 'russia') {
+            // Usa MapaRussia para gerar o mapa SVG
+            this.dadoAtual = this.pegarDadoUnico(pacote);
+            this.textoOriginal = this.dadoAtual.nome;
+            this.textoEsperado = pacote.processarConversao ? pacote.processarConversao(this.textoOriginal) : this.textoOriginal;
+
+            // Mostra o mapa
+            this.ui.mapContainer.classList.add('active');
+            const svg = MapaRussia.gerarSVG({
+                largura: MAPA_LARGURA,
+                altura: MAPA_ALTURA,
+                cidades: [], // sem cidades desenhadas no SVG; usamos o marcador HTML animado
+                mostrarRotulos: false
+            });
+            this.ui.svgContainer.innerHTML = svg;
+
+            // Posiciona o marcador em cima da cidade sorteada
+            this.ui.marker.classList.add('active');
+            this.ui.marker.classList.remove('correct');
+            this.posicionarMarcador(this.dadoAtual.lat, this.dadoAtual.lon);
+
+            this.renderizarTextoNaTela(pacote);
+        } else {
+            // Modo longo ou sem mapa
+            this.pontoMarcadoAtual = null;
+            this.ui.mapContainer.classList.remove('active');
+            this.ui.marker.classList.remove('active');
+            let textos = pacote.dados.filter(t => !pacote.completadas.has(t));
+            if (textos.length === 0) {
+                pacote.completadas.clear();
+                textos = pacote.dados;
+            }
+            this.textoOriginal = textos[Math.floor(Math.random() * textos.length)];
+            this.dadoAtual = null;
+            this.textoEsperado = pacote.processarConversao ? pacote.processarConversao(this.textoOriginal) : this.textoOriginal;
+            this.renderizarTextoNaTela(pacote);
+        }
+
+        this.ui.inputField.focus();
+    }
+
+    renderizarTextoNaTela(pacote) {
+        const display = this.ui.textDisplay;
+
+        if (this.modoAtual === 'curto') {
+            display.innerHTML = `<div class="original-text">${this.textoOriginal}</div>`;
+            const total = pacote.dados.length;
+            const concluidos = pacote.completadas.size;
+            this.ui.progressoSpan.innerHTML = `
+                Cidades russas: <span class="counter-badge">${concluidos} / ${total}</span>
+                ${concluidos === total ? '🏆' : ''}
+            `;
+        } else {
+            if (pacote.tipo === 'transliteracao' && !this.ui.hintToggle.checked) {
+                display.innerHTML = `<div class="original-text">${this.textoOriginal}</div>`;
+            } else if (pacote.tipo === 'transliteracao') {
+                display.innerHTML = `<div style="width:100%"><div class="original-text" style="font-size:22px;margin-bottom:12px">${this.textoOriginal}</div><div id="spansContainer" style="font-size:18px;color:#a6adc8"></div></div>`;
+                const container = document.getElementById('spansContainer');
+                for (const char of this.textoEsperado) {
+                    const span = document.createElement('span');
+                    span.textContent = char;
+                    span.className = 'char';
+                    container.appendChild(span);
+                }
+            } else {
+                const container = document.createElement('div');
+                container.id = 'spansContainer';
+                for (const char of this.textoEsperado) {
+                    const span = document.createElement('span');
+                    span.textContent = char;
+                    span.className = 'char';
+                    container.appendChild(span);
+                }
+                display.innerHTML = '';
+                display.appendChild(container);
+            }
+            this.ui.progressoSpan.textContent = `Progresso: 0 / ${this.textoEsperado.length}`;
+        }
+    }
+
+    processarDigitacao(e) {
+        // Comparação sem diferenciar maiúsculas/minúsculas: o treino é de
+        // transliteração, não de caixa alta.
+        const digitado = this.ui.inputField.value;
+        const digitadoNorm = digitado.toLowerCase();
+        const esperadoNorm = this.textoEsperado.toLowerCase();
+        const pacote = Pacotes[this.pacoteAtualKey];
+        
+        const isCorreto = esperadoNorm.startsWith(digitadoNorm);
+        if (digitado.length > 0) {
+            this.ui.inputField.className = isCorreto ? 'input-area correct-input' : 'input-area incorrect-input';
+        } else {
+            this.ui.inputField.className = 'input-area';
+        }
+
+        if (this.modoAtual === 'curto') {
+            if (digitadoNorm === esperadoNorm) {
+                pacote.completadas.add(this.textoOriginal);
+                // Se for Rússia, atualiza o marcador para verde
+                if (pacote.tipo === 'russia') {
+                    this.ui.marker.classList.add('correct');
+                }
+                this.finalizarRodada(500);
+            }
+        } else {
+            const total = this.textoEsperado.length;
+            this.ui.progressoSpan.textContent = `Progresso: ${digitado.length} / ${total}`;
+
+            const spansContainer = document.getElementById('spansContainer');
+            if (spansContainer) {
+                const spans = spansContainer.querySelectorAll('.char');
+                for (let i = 0; i < spans.length; i++) {
+                    if (i < digitado.length) {
+                        spans[i].className = digitadoNorm[i] === esperadoNorm[i] ? 'char correct' : 'char incorrect';
+                    } else {
+                        spans[i].className = 'char';
+                    }
+                }
+            }
+
+            if (digitadoNorm === esperadoNorm) {
+                pacote.completadas.add(this.textoOriginal);
+                this.finalizarRodada(600);
+            }
+        }
+    }
+
+    finalizarRodada(delayMs) {
+        this.ui.inputField.disabled = true;
+        this.ui.textDisplay.style.color = 'var(--correct)';
+        this.ui.feedbackSpan.textContent = '✅ Excelente!';
+        this.ui.feedbackSpan.className = 'feedback-text success';
+
+        this.timerProximaRodada = setTimeout(() => {
+            this.iniciarRodada();
+        }, delayMs);
+    }
+}
+
+// Inicialização
+window.onload = () => {
+    const app = new TypingTutor();
+    app.atualizarListaPacotes();
+    app.iniciarRodada();
+};
+</script>
+
+</body>
+</html>
